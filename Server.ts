@@ -1,6 +1,10 @@
+import { Collection } from "discord.js";
 import { DEDICATED_COMPRESSOR_3KB, SHARED_COMPRESSOR, SSLApp } from "uWebSockets.js";
 
-import { IMessageTypeEnum, IBotMessage, IMessagePayload } from "../DiscordWeb/src/components/Interfaces";
+import { IMessageTypeEnum, IBotMessage, IMessagePayload } from "../DiscordBotJS/src/Interfaces";
+
+import { DiscordBotJS } from "../DiscordBotJS/ProtoOutput/compiled";
+import { performance } from "perf_hooks";
 
 const ChannelIDRegex = /(id) (\w{16,20})/
 const RegexIsMessage = /message/
@@ -14,7 +18,7 @@ SSLApp({
 }).ws('/*', {
 	idleTimeout: 30,
 	maxBackpressure: 1024,
-	maxPayloadLength: 512,
+	maxPayloadLength: 5012,
 	compression: SHARED_COMPRESSOR,
 
 	upgrade: (res, req, context) => { 
@@ -38,15 +42,30 @@ SSLApp({
 	},
 	message: (ws, message, isBinary) => {
 		// Keep alive messages. Ignore	
+		console.log('MEssage lengh', message.byteLength)
 		if(!message.byteLength){
 			return
 		}
 		const DecMessage = Buffer.from(message).toString()
-
 		if (ws.bot) {
-			const JsonMessage = JSON.parse(DecMessage) as IBotMessage
-			if ((JsonMessage.p as IMessagePayload).channel_id) {
-				ws.publish((JsonMessage.p as IMessagePayload).guild_id, message)
+			if (isBinary) {
+				const binaryPerf = performance.now()
+				// Binary messages
+				const ff = Buffer.from(message)
+				console.log(ff)
+				const decodedMessage = DiscordBotJS.BotResponse.decode(ff)
+				console.log(decodedMessage)
+				ws.publish(decodedMessage.guild_id!, message, true)
+				console.log("Binary", performance.now() - binaryPerf)
+			} else {
+				// JSON Messages
+				const jsonPerf = performance.now()
+				const JsonMessage = JSON.parse(DecMessage) as IBotMessage
+
+				if ((JsonMessage.p as IMessagePayload).channel_id) {
+					ws.publish((JsonMessage.p as IMessagePayload).guild_id, message)
+					console.log("JSON", performance.now() - jsonPerf)
+				}
 			}
 			
 		} else {
@@ -71,3 +90,13 @@ SSLApp({
 	}
 })
 
+function reviver(key, value) {
+	if(typeof value === 'object' && value !== null) {
+	  if (value.dataType === 'Collection') {
+		return new Collection(value.value);
+	  } else if (value.dataType === 'map') {
+		return new Map(value.value);
+	  }
+	}
+	return value;
+}

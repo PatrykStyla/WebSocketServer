@@ -17,7 +17,7 @@ SSLApp({
 	key_file_name: "/etc/letsencrypt/live/patrykstyla.com/privkey.pem",
 }).ws('/*', {
 	idleTimeout: 30,
-	maxBackpressure: 1024,
+	maxBackpressure: 1024 * 1024,
 	maxPayloadLength: 5012,
 	compression: SHARED_COMPRESSOR,
 

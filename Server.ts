@@ -9,7 +9,7 @@ import { performance } from "perf_hooks";
 const ChannelIDRegex = /(id) (\w{16,20})/
 const RegexIsMessage = /message/
 
-const BotIPV6Adress = new Set<string>(['0000:0000:0000:0000:0000:ffff:3359:fca7'])
+const BotIPV6Adress = new Set<string>(['0000:0000:0000:0000:0000:ffff:1284:278e'])
 
 
 SSLApp({
